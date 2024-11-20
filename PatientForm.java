@@ -10,6 +10,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Statement;
 import javafx.application.Application;
 import javafx.geometry.*;
@@ -34,6 +36,12 @@ public class PatientForm extends Application {
         gridPane.setPadding(new Insets(20,20,20,20));
         gridPane.setVgap(10);
         gridPane.setHgap(10);
+        
+        Image image = new Image("file:C:/Users/Danny/Downloads/Kaiser-Permanente-Logo.jpg");
+        ImageView imageView = new ImageView(image);
+        imageView.setFitWidth(200);
+        imageView.setFitHeight(200);
+        imageView.setPreserveRatio(true);
         
         Label patientIDLabel = new Label ("Patient ID");
         Label patientNameLabel = new Label ("Patient Name");
@@ -64,10 +72,9 @@ public class PatientForm extends Application {
         
         Button submitButton = new Button("Submit");
         
-        Image image = new Image("file:Keiser.png");
-        ImageView imageView = new ImageView(image);
+      
         
-        gridPane.add(imageView, 2, 0);
+        gridPane.add(imageView, 3, 0);
         
         gridPane.add(patientIDLabel, 0, 0);
         gridPane.add(patientIDTextField, 1, 0);
@@ -109,9 +116,16 @@ public class PatientForm extends Application {
             if(medication2CheckBox.isSelected()) medications +="Advil,";
             if(medication3CheckBox.isSelected()) medications +="Blood thinner";
             
+            
+            try{
             //call a method with its parameters
             writeDataToFile(patientid, patientName,patientAge,state,
             gender, medications);
+                
+            } catch(SQLException ex)
+            {
+                System.out.println(ex.getMessage());
+            }
             
    
         
@@ -124,8 +138,8 @@ public class PatientForm extends Application {
     
     private void writeDataToFile(String a, String patientName,
             String patientAge, String state, String gender, 
-            String medications)
-{
+            String medications) throws SQLException
+    {
     try (BufferedWriter writer = new BufferedWriter
             (new FileWriter("C:/Users/Danny/OneDrive - Rancho Santiago Community College District/Desktop/patient_data.txt", true))) {
         writer.write("Patient ID: " + a + "\n");
@@ -136,43 +150,52 @@ public class PatientForm extends Application {
         writer.write("Medications: " + medications + "\n");
         writer.newLine();
         
-        String sql = "INSERT INTO patients (Username, password) VALUES (?, ?)";
+        insertData(a, patientName, patientAge, state, gender, medications);
         
-        
-        
-        JOptionPane.showMessageDialog(null, "Patient Data Recorded");
     } catch (IOException e) {
         JOptionPane.showMessageDialog(null, e.toString());
     }
     
-    // Database insertion part
-    Statement stmt;
-
-    try {
-        Class.forName("org.apache.derby.jdbc.ClientDriver").newInstance();
-        System.out.println("Driver Connected");
-
-        // Corrected SQLite connection URL
-        String url = "jdbc:sqlite:C:/Users/Danny/OneDrive - Rancho Santiago Community College District/Documents/NetBeansProjects/ClassExercise10/patients.db";
-        Connection connection = DriverManager.getConnection(url);
-
-        System.out.println("DB connected");
-        stmt = connection.createStatement();
-
-        String query = "INSERT INTO Patients (PatientID, name, age, state, gender, medications) VALUES (" 
-            + Integer.parseInt(a) + " ,'" 
-            + patientName + "'," 
-            + Integer.parseInt(patientAge) + ",'" 
-            + state + "','" 
-            + gender + "','" 
-            + medications + "')";
-
-        stmt.execute(query);
-        System.out.println("Record inserted into DB");
-    } catch (Exception ex) {
-        System.out.println(ex.toString());
+    
     }
-}
+
+    private Connection connect()
+    {
+        Connection conn = null;
+                
+        String url = "jdbc:sqlite:C:/Users/Danny/OneDrive - Rancho Santiago Community College District/Documents/NetBeansProjects/ClassExercise10/patients10.db";
+
+        try
+        {
+            conn = DriverManager.getConnection(url);
+        } catch(SQLException ex)
+        {
+            System.out.println(ex.getMessage());
+        }
+        
+        return conn;
+    }
+    
+    private void insertData(String id, String name, String age, String state, String gender, String medication) throws SQLException
+    {
+        String sql = "INSERT INTO patients10 (id, name, age, state, gender, medications) VALUES (?, ?, ?, ?, ?, ?)";
+        
+        try(Connection conn = this.connect();
+                
+                PreparedStatement pstmt = conn.prepareStatement(sql))
+        {
+            pstmt.setString(1, id);
+            pstmt.setString(2, name);
+            pstmt.setString(3, age);
+            pstmt.setString(4, state);
+            pstmt.setString(5, gender);
+            pstmt.setString(6, medication);
+            
+            pstmt.executeUpdate();
+            JOptionPane.showMessageDialog(null, "Patient Data Recorded");
+
+        }
+    }
 
     
     public static void main(String[] args) {
